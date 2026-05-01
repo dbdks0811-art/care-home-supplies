@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>비품·간식 관리 v4.0 | 요양원</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --font:'Noto Sans KR',sans-serif;
+  --office-bg:#EFF6FF;--office:#1D4ED8;--office-b:#BFDBFE;--office-d:#1E3A8A;
+  --nursing-bg:#F0FDF4;--nursing:#16A34A;--nursing-b:#BBF7D0;--nursing-d:#14532D;
+  --care-bg:#FFF7ED;--care:#D97706;--care-b:#FDE68A;--care-d:#92400E;
+  --mgmt-bg:#FAF5FF;--mgmt:#7C3AED;--mgmt-b:#DDD6FE;--mgmt-d:#4C1D95;
+  --snack-bg:#FFF0F6;--snack:#DB2777;--snack-b:#FBCFE8;--snack-d:#831843;
+  --bg:#F1F5F9;--white:#FFF;--text:#0F172A;--text2:#475569;--text3:#94A3B8;
+  --border:#E2E8F0;--focus:#3B82F6;
+  --red:#DC2626;--red-bg:#FEF2F2;--green:#16A34A;--green-bg:#F0FDF4;--amber:#D97706;--amber-bg:#FFFBEB;
+  --sh:0 1px 3px rgba(0,0,0,.08);--shm:0 6px 20px rgba(0,0,0,.14);
+  --r:10px;--rs:6px;--rl:14px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6;font-size:16px}
+#dlBanner{display:none;background:#7C3AED;color:#fff;padding:10px 1.5rem;text-align:center;font-size:.88rem;font-weight:600;position:sticky;top:0;z-index:200}
+#dlBanner.on{display:block}
+.hdr{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.hdr-in{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:60px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-ic{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#1D4ED8,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-nm{font-size:1rem;font-weight:700}.logo-sb{font-size:.72rem;color:var(--text2)}
+.hdr-r{display:flex;align-items:center;gap:10px}
+.hdr-date{font-size:.8rem;color:var(--text2)}
+.mbadge{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:999px;border:1.5px solid}
+.mbadge.local{background:#FFF3E0;color:#E65100;border-color:#FFCC80}
+.mbadge.fb{background:#E8F5E9;color:#1B5E20;border-color:#A5D6A7}
+.tnav{background:var(--white);border-bottom:1px solid var(--border);padding:0 1.5rem;overflow-x:auto}
+.tnav-in{max-width:1300px;margin:0 auto;display:flex}
+.tbtn{display:flex;align-items:center;gap:5px;padding:0 17px;height:48px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:.875rem;font-weight:500;color:var(--text2);border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s}
+.tbtn:hover{color:var(--text);background:var(--bg)}
+.tbtn.act{color:var(--office);border-bottom-color:var(--office)}
+.tbtn[data-d="간호팀"].act{color:var(--nursing);border-bottom-color:var(--nursing)}
+.tbtn[data-d="요양팀"].act{color:var(--care);border-bottom-color:var(--care)}
+.tbtn[data-d="관리팀"].act{color:var(--mgmt);border-bottom-color:var(--mgmt)}
+.tbtn[data-d="간식팀"].act{color:var(--snack);border-bottom-color:var(--snack)}
+.tbtn[data-d="관리자"].act{color:var(--text);border-bottom-color:var(--text)}
+.tbadge{background:var(--bg);color:var(--text2);font-size:.68rem;font-weight:700;padding:2px 6px;border-radius:999px;min-width:18px;text-align:center}
+.tbtn.act .tbadge{background:currentColor;color:#fff}
+.main{max-width:1300px;margin:0 auto;padding:1.5rem}
+.panel{display:none}.panel.act{display:block}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--rl);padding:1.5rem;margin-bottom:1.25rem;box-shadow:var(--sh)}
+.card-hd{font-size:1rem;font-weight:700;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.dbanner{border-radius:var(--rl);padding:1.2rem 1.5rem;margin-bottom:1.25rem;border:1px solid;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.dbanner.office{background:var(--office-bg);border-color:var(--office-b)}
+.dbanner.nursing{background:var(--nursing-bg);border-color:var(--nursing-b)}
+.dbanner.care{background:var(--care-bg);border-color:var(--care-b)}
+.dbanner.mgmt{background:var(--mgmt-bg);border-color:var(--mgmt-b)}
+.dbanner.snack{background:var(--snack-bg);border-color:var(--snack-b)}
+.dbtitle{font-size:1.15rem;font-weight:700}
+.office .dbtitle{color:var(--office-d)}.nursing .dbtitle{color:var(--nursing-d)}.care .dbtitle{color:var(--care-d)}.mgmt .dbtitle{color:var(--mgmt-d)}.snack .dbtitle{color:var(--snack-d)}
+.dbsub{font-size:.82rem;opacity:.85}
+.office .dbsub{color:var(--office)}.nursing .dbsub{color:var(--nursing)}.care .dbsub{color:var(--care)}.mgmt .dbsub{color:var(--mgmt)}.snack .dbsub{color:var(--snack)}
+.dl-ov{display:none;background:rgba(248,250,252,.95);border:2px dashed #CBD5E1;border-radius:var(--rl);padding:2.5rem;text-align:center;margin-bottom:1.25rem}
+.dl-ov.on{display:block}.dl-ov h3{font-size:1.2rem;font-weight:700;color:#7C3AED;margin-bottom:.5rem}.dl-ov p{color:var(--text2);font-size:.88rem}
+.fg{display:flex;flex-direction:column;gap:5px}.fg.full{grid-column:1/-1}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:1rem}
+.lbl{font-size:.86rem;font-weight:600;color:var(--text);display:flex;align-items:center;gap:4px}
+.req{color:var(--red);font-size:.82rem}
+.opt{font-size:.7rem;font-weight:400;color:var(--text3);background:var(--bg);padding:2px 6px;border-radius:4px}
+.inp,.sel,.txa{font-family:var(--font);font-size:.92rem;padding:10px 13px;border:1.5px solid var(--border);border-radius:var(--rs);background:var(--white);color:var(--text);width:100%;transition:border-color .15s,box-shadow .15s}
+.inp:focus,.sel:focus,.txa:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.inp.err,.sel.err{border-color:var(--red)}.txa{resize:vertical;min-height:66px}
+.hint{font-size:.76rem;color:var(--text3)}.err-msg{font-size:.76rem;color:var(--red);display:none}
+.warn-msg{font-size:.78rem;color:var(--amber);background:var(--amber-bg);border:1px solid #FDE68A;border-radius:var(--rs);padding:7px 11px;margin-top:4px;display:none}
+.qty-row{display:flex;gap:7px}.qty-row .inp{flex:1}.qty-row .sel{width:105px;flex-shrink:0}
+.ac-wrap{position:relative}
+.ac-list{position:absolute;top:100%;left:0;right:0;z-index:50;background:var(--white);border:1px solid var(--border);border-radius:var(--rs);box-shadow:var(--shm);max-height:190px;overflow-y:auto;display:none}
+.ac-item{padding:8px 13px;cursor:pointer;font-size:.87rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .1s}
+.ac-item:last-child{border-bottom:none}.ac-item:hover{background:var(--bg)}
+.ac-tag{font-size:.73rem;padding:2px 7px;border-radius:999px}.ac-fav{background:#FEF9C3;color:#92400E}.ac-hist{background:var(--bg);color:var(--text3)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font);font-size:.875rem;font-weight:600;padding:10px 18px;border-radius:var(--rs);border:none;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn-primary{background:#1D4ED8;color:#fff}.btn-primary:hover{background:#1E40AF}
+.btn-success{background:var(--green);color:#fff}.btn-success:hover{background:#15803D}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#B91C1C}
+.btn-outline{background:var(--white);color:var(--text);border:1.5px solid var(--border)}.btn-outline:hover{background:var(--bg)}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border)}.btn-ghost:hover{background:var(--bg)}
+.btn-sm{font-size:.78rem;padding:6px 12px}.btn-lg{font-size:.95rem;padding:12px 24px}.btn-full{width:100%}
+.btn-office{background:var(--office);color:#fff}.btn-office:hover{background:var(--office-d)}
+.btn-nursing{background:var(--nursing);color:#fff}.btn-nursing:hover{background:var(--nursing-d)}
+.btn-care{background:var(--care);color:#fff}.btn-care:hover{background:var(--care-d)}
+.btn-mgmt{background:var(--mgmt);color:#fff}.btn-mgmt:hover{background:var(--mgmt-d)}
+.btn-snack{background:var(--snack);color:#fff}.btn-snack:hover{background:var(--snack-d)}
+.btn-cp{background:#E52528;color:#fff;font-size:.73rem;padding:4px 9px;border-radius:4px;border:none;cursor:pointer;font-family:var(--font);font-weight:700;text-decoration:none;transition:opacity .15s;display:inline-block}
+.btn-cp:hover{opacity:.83}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
+.tbl th{background:var(--bg);color:var(--text2);font-size:.74rem;font-weight:700;padding:8px 10px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}.tbl tr:hover td{background:#F8FAFC}
+.sbadge{display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:700;cursor:pointer}
+.sbadge.wait{background:#FFF7ED;color:#C2410C;border:1px solid #FED7AA}
+.sbadge.done{background:var(--green-bg);color:#166534;border:1px solid var(--nursing-b)}
+.dtag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.72rem;font-weight:600}
+.dtag.office{background:var(--office-bg);color:var(--office)}.dtag.nursing{background:var(--nursing-bg);color:var(--nursing)}.dtag.care{background:var(--care-bg);color:var(--care)}.dtag.mgmt{background:var(--mgmt-bg);color:var(--mgmt)}.dtag.snack{background:var(--snack-bg);color:var(--snack)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--text3);font-size:.88rem}
+.empty-ic{font-size:1.8rem;display:block;margin-bottom:7px}
+.alink{color:var(--office);text-decoration:none;font-size:.8rem;border-bottom:1px solid var(--office-b)}
+.alink:hover{color:var(--office-d)}
+.fav-btn{background:none;border:none;cursor:pointer;font-size:1.05rem;padding:2px;transition:transform .15s;line-height:1}
+.fav-btn:hover{transform:scale(1.25)}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:.85rem;margin-bottom:1.5rem}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1.1rem;box-shadow:var(--sh)}
+.stat-lbl{font-size:.73rem;color:var(--text2);font-weight:600;margin-bottom:3px}
+.stat-n{font-size:1.65rem;font-weight:700;color:var(--text);line-height:1}
+.stat-n.office{color:var(--office)}.stat-n.nursing{color:var(--nursing)}.stat-n.care{color:var(--care)}.stat-n.mgmt{color:var(--mgmt)}.stat-n.snack{color:var(--snack)}.stat-n.wait{color:#C2410C}.stat-n.done{color:var(--green)}
+.fbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+.fbtn{padding:5px 13px;border-radius:999px;border:1.5px solid var(--border);background:var(--white);color:var(--text2);font-family:var(--font);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s}
+.fbtn:hover{border-color:#94A3B8;color:var(--text)}.fbtn.on{background:var(--text);border-color:var(--text);color:#fff}
+.fbtn.office.on{background:var(--office);border-color:var(--office);color:#fff}.fbtn.nursing.on{background:var(--nursing);border-color:var(--nursing);color:#fff}.fbtn.care.on{background:var(--care);border-color:var(--care);color:#fff}.fbtn.mgmt.on{background:var(--mgmt);border-color:var(--mgmt);color:#fff}.fbtn.snack.on{background:var(--snack);border-color:var(--snack);color:#fff}
+.fbtn.wf.on{background:#C2410C;border-color:#C2410C;color:#fff}.fbtn.df.on{background:var(--green);border-color:var(--green);color:#fff}
+.adm-acts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:1rem}
+.sum-card{background:var(--bg);border-radius:var(--r);padding:.9rem 1.2rem;margin-bottom:.6rem;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sum-nm{font-weight:700;font-size:.9rem}.sum-qty{font-size:1.1rem;font-weight:700;color:var(--office)}
+.mbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:.7rem 1rem;background:var(--bg);border-radius:var(--r);margin-bottom:1rem;border:1px solid var(--border)}
+.mbar label{font-size:.8rem;font-weight:600;color:var(--text2)}.mbar .inp{width:148px;padding:7px 11px;font-size:.83rem}
+.atab-bar{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1rem}
+.atab-btn{padding:8px 20px;border:none;background:none;cursor:pointer;font-family:var(--font);font-size:.88rem;font-weight:600;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .15s}
+.atab-btn:hover{color:var(--text);background:var(--bg)}.atab-btn.on{color:var(--office);border-bottom-color:var(--office)}
+.ovl{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.48);display:none;align-items:center;justify-content:center;padding:1rem}
+.ovl.open{display:flex}
+.modal{background:var(--white);border-radius:var(--rl);padding:1.7rem;width:100%;max-width:560px;box-shadow:0 24px 48px rgba(0,0,0,.18);max-height:90vh;overflow-y:auto}
+.modal-sm{max-width:420px}.modal-t{font-size:1.05rem;font-weight:700;margin-bottom:1.25rem}.modal-act{display:flex;gap:9px;margin-top:1.25rem;justify-content:flex-end;flex-wrap:wrap}
+.pw-wrap{position:relative}.pw-wrap .inp{padding-right:42px}
+.pw-toggle{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.95rem;color:var(--text3);padding:2px}
+.mig{background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--r);padding:.9rem 1.2rem;margin-bottom:1.25rem;display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.mig.show{display:flex}
+.tbox{position:fixed;top:74px;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;box-shadow:var(--shm);display:flex;align-items:center;gap:8px;min-width:240px;max-width:340px;font-size:.86rem;font-weight:500;animation:tsIn .22s ease;pointer-events:all}
+.toast.s{border-left:4px solid var(--green)}.toast.e{border-left:4px solid var(--red)}.toast.w{border-left:4px solid var(--amber)}
+@keyframes tsIn{from{transform:translateX(28px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tsOut{to{transform:translateX(28px);opacity:0}}
+@media(max-width:768px){.main{padding:1rem}.fgrid{grid-template-columns:1fr}.stat-grid{grid-template-columns:repeat(3,1fr)}.tbtn{padding:0 10px;font-size:.8rem}.logo-sb,.hdr-date{display:none}.adm-acts{flex-direction:column}.adm-acts .btn{width:100%}.modal{padding:1.2rem}}
+@media(max-width:480px){.stat-grid{grid-template-columns:repeat(2,1fr)}.tbl{font-size:.76rem}.tbl th,.tbl td{padding:7px 7px}.tbadge{display:none}}
+</style>
+</head>
+<body>
+
+<div id="dlBanner">🔒 요청이 마감되었습니다. 담당자에게 문의해 주세요.</div>
+<div class="mig" id="migBanner">
+  <div><strong>💾 기존 데이터 발견</strong><span style="font-size:.82rem;color:var(--text2);margin-left:6px">localStorage 데이터를 Firebase로 이전할 수 있습니다</span></div>
+  <div style="display:flex;gap:7px">
+    <button class="btn btn-sm btn-primary" onclick="migrateLS()">이전하기</button>
+    <button class="btn btn-sm btn-ghost" onclick="document.getElementById('migBanner').classList.remove('show')">나중에</button>
+  </div>
+</div>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="logo">
+      <div class="logo-ic">🏥</div>
+      <div><div class="logo-nm">비품·간식 관리 시스템</div><div class="logo-sb">요양원 통합 v4.0</div></div>
+    </div>
+    <div class="hdr-r">
+      <span class="mbadge local" id="modeBadge">📦 로컬</span>
+      <div class="hdr-date" id="hdrDate"></div>
+    </div>
+  </div>
+</header>
+
+<nav class="tnav"><div class="tnav-in">
+  <button class="tbtn act" data-d="사무팀" onclick="switchTab('사무팀')">📋 사무팀 <span class="tbadge" id="b-사무팀">0</span></button>
+  <button class="tbtn" data-d="간호팀" onclick="switchTab('간호팀')">💊 간호팀 <span class="tbadge" id="b-간호팀">0</span></button>
+  <button class="tbtn" data-d="요양팀" onclick="switchTab('요양팀')">🤝 요양팀 <span class="tbadge" id="b-요양팀">0</span></button>
+  <button class="tbtn" data-d="관리팀" onclick="switchTab('관리팀')">🔧 관리팀 <span class="tbadge" id="b-관리팀">0</span></button>
+  <button class="tbtn" data-d="간식팀" onclick="switchTab('간식팀')">🍬 간식팀 <span class="tbadge" id="b-간식팀">0</span></button>
+  <button class="tbtn" data-d="관리자" onclick="openAdminTab()">🗂️ 관리자</button>
+</div></nav>
+
+<main class="main">
+  <div class="panel act" id="panel-사무팀"></div>
+  <div class="panel" id="panel-간호팀"></div>
+  <div class="panel" id="panel-요양팀"></div>
+  <div class="panel" id="panel-관리팀"></div>
+  <div class="panel" id="panel-간식팀"></div>
+
+  <div class="panel" id="panel-관리자">
+    <div class="card">
+      <div class="card-hd">📊 전체 현황</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-lbl">전체 비품</div><div class="stat-n" id="st-total">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">구매 대기</div><div class="stat-n wait" id="st-wait">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">구매 완료</div><div class="stat-n done" id="st-done">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">사무팀</div><div class="stat-n office" id="st-사무팀">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">간호팀</div><div class="stat-n nursing" id="st-간호팀">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">요양팀</div><div class="stat-n care" id="st-요양팀">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">관리팀</div><div class="stat-n mgmt" id="st-관리팀">0</div></div>
+        <div class="stat-card"><div class="stat-lbl">간식팀</div><div class="stat-n snack" id="st-간식팀">0</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hd">🛠️ 관리 도구</div>
+      <div class="atab-bar">
+        <button class="atab-btn on" id="atab-supply" onclick="switchAdminTab('supply')">📋 비품 요청</button>
+        <button class="atab-btn" id="atab-sum" onclick="switchAdminTab('sum')">🔢 품목 합산</button>
+      </div>
+
+      <div id="adm-supply">
+        <div class="mbar">
+          <label>📅 기간:</label>
+          <input type="month" class="inp" id="supplyMonth" onchange="onMonthChange()">
+          <button class="btn btn-sm btn-outline" onclick="setMonth('supply','current')">이번 달</button>
+          <button class="btn btn-sm btn-outline" onclick="setMonth('supply','all')">전체</button>
+        </div>
+        <div class="fbar">
+          <span style="font-size:.78rem;font-weight:700;color:var(--text2)">부서:</span>
+          <button class="fbtn on" data-f="sdept" data-v="전체" onclick="applyF('sdept','전체',this)">전체</button>
+          <button class="fbtn office" data-f="sdept" data-v="사무팀" onclick="applyF('sdept','사무팀',this)">사무팀</button>
+          <button class="fbtn nursing" data-f="sdept" data-v="간호팀" onclick="applyF('sdept','간호팀',this)">간호팀</button>
+          <button class="fbtn care" data-f="sdept" data-v="요양팀" onclick="applyF('sdept','요양팀',this)">요양팀</button>
+          <button class="fbtn mgmt" data-f="sdept" data-v="관리팀" onclick="applyF('sdept','관리팀',this)">관리팀</button>
+          <button class="fbtn snack" data-f="sdept" data-v="간식팀" onclick="applyF('sdept','간식팀',this)">간식팀</button>
+          <span style="font-size:.78rem;font-weight:700;color:var(--text2);margin-left:6px">상태:</span>
+          <button class="fbtn on" data-f="sstatus" data-v="전체" onclick="applyF('sstatus','전체',this)">전체</button>
+          <button class="fbtn wf" data-f="sstatus" data-v="구매대기" onclick="applyF('sstatus','구매대기',this)">⏳ 대기</button>
+          <button class="fbtn df" data-f="sstatus" data-v="구매완료" onclick="applyF('sstatus','구매완료',this)">✅ 완료</button>
+        </div>
+        <div class="adm-acts">
+          <button class="btn btn-success" onclick="copyList()">📋 목록 복사</button>
+          <button class="btn btn-outline" onclick="exportCSV()">📄 CSV</button>
+          <button class="btn btn-outline" onclick="exportExcel()">📊 엑셀(XLSX)</button>
+          <button class="btn btn-outline" id="dlBtn" onclick="toggleDeadline()">🔒 요청 마감</button>
+          <button class="btn btn-outline btn-sm" onclick="showMonthResetModal()">🗑️ 월별 초기화</button>
+          <button class="btn btn-danger btn-sm" onclick="showClearAllModal()">⚠️ 전체 초기화</button>
+        </div>
+        <div id="supplyTableWrap"></div>
+      </div>
+
+      <div id="adm-sum" style="display:none"><div id="sumWrap"></div></div>
+    </div>
+  </div>
+</main>
+
+<!-- 관리자 로그인 (Firebase Auth 이메일/비밀번호 + localStorage fallback) -->
+<div class="ovl" id="adminModal">
+  <div class="modal modal-sm">
+    <div class="modal-t">🔐 관리자 인증</div>
+    <!-- Firebase 모드: 이메일 + 비밀번호 -->
+    <div id="adminFbForm">
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem">
+        관리자 이메일과 비밀번호를 입력해 주세요.
+      </p>
+      <div class="fg" style="margin-bottom:.75rem">
+        <label class="lbl">이메일</label>
+        <input type="email" class="inp" id="adminEmail" placeholder="admin@example.com"
+          onkeydown="if(event.key==='Enter')document.getElementById('adminPw').focus()">
+      </div>
+      <div class="fg">
+        <label class="lbl">비밀번호</label>
+        <div class="pw-wrap">
+          <input type="password" class="inp" id="adminPw" placeholder="비밀번호"
+            onkeydown="if(event.key==='Enter')doAdminLogin()">
+          <button class="pw-toggle" onclick="togglePw('adminPw',this)">👁️</button>
+        </div>
+      </div>
+    </div>
+    <!-- localStorage 모드: 비밀번호만 -->
+    <div id="adminLocalForm" style="display:none">
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:1rem">
+        비밀번호를 입력해 주세요. <span style="color:var(--text3)">(초기값: admin1234)</span>
+      </p>
+      <div class="fg">
+        <label class="lbl">비밀번호</label>
+        <div class="pw-wrap">
+          <input type="password" class="inp" id="adminPwLocal" placeholder="비밀번호"
+            onkeydown="if(event.key==='Enter')doAdminLogin()">
+          <button class="pw-toggle" onclick="togglePw('adminPwLocal',this)">👁️</button>
+        </div>
+      </div>
+    </div>
+    <div class="err-msg" id="adminLoginErr" style="display:block;margin-top:.5rem"></div>
+    <div class="modal-act">
+      <button class="btn btn-outline" onclick="closeOvl('adminModal')">취소</button>
+      <button class="btn btn-primary" id="adminLoginBtn" onclick="doAdminLogin()">로그인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 비품 수정 -->
+<div class="ovl" id="editSupplyModal">
+  <div class="modal">
+    <div class="modal-t">✏️ 비품 요청 수정</div>
+    <div id="editSupplyContent"></div>
+    <div class="modal-act">
+      <button class="btn btn-outline" onclick="closeOvl('editSupplyModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEditSupply()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 월별 초기화 -->
+<div class="ovl" id="monthResetModal">
+  <div class="modal modal-sm">
+    <div class="modal-t">🗑️ 월별 데이터 초기화</div>
+    <div class="fg" style="margin-bottom:.75rem">
+      <label class="lbl">초기화할 월 선택</label>
+      <input type="month" class="inp" id="monthResetInput">
+    </div>
+    <p style="font-size:.8rem;color:var(--red)">⚠️ 선택한 월의 모든 요청이 영구 삭제됩니다.</p>
+    <div class="modal-act">
+      <button class="btn btn-outline" onclick="closeOvl('monthResetModal')">취소</button>
+      <button class="btn btn-danger" onclick="execMonthReset()">초기화 실행</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ 버그1 핵심 수정: window.confirm() → 커스텀 모달 -->
+<div class="ovl" id="cfmModal">
+  <div class="modal modal-sm">
+    <div class="modal-t" id="cfmTitle">확인</div>
+    <p id="cfmMsg" style="font-size:.9rem;color:var(--text2);line-height:1.6;white-space:pre-line"></p>
+    <p id="cfmSub" style="font-size:.78rem;color:var(--red);margin-top:.5rem;display:none"></p>
+    <div class="modal-act">
+      <button class="btn btn-outline" onclick="cfmAnswer(false)">취소</button>
+      <button class="btn btn-danger" id="cfmOk" onclick="cfmAnswer(true)">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="tbox" id="toastBox"></div>
+
+<script>
+/* ================================================================
+   비품 구매 요청 시스템 v4.0
+   ─────────────────────────────────────────────────────────────────
+   아키텍처: Firestore onSnapshot → S.allData(캐시) → UI 렌더링
+   모든 쓰기는 Firestore로 직행, 로컬 상태 직접 조작 금지
+   ================================================================ */
+
+/* ──────────────────────────────────────────────────────────────
+   [1] FIREBASE 설정
+   ──────────────────────────────────────────────────────────────
+   ※ 아래 값을 Firebase 콘솔에서 발급받은 실제 값으로 교체하세요.
+   ※ 교체하지 않으면 localStorage 폴백 모드로 동작합니다.
+
+   Firebase 설정 방법:
+   1) https://console.firebase.google.com → 프로젝트 생성
+   2) Authentication → 로그인 방법 → 이메일/비밀번호 활성화
+   3)                              → 익명 활성화
+   4) Firestore Database → 테스트 모드로 시작 후 아래 Rules 적용
+   5) 프로젝트 설정 → 웹 앱 추가 → 아래 값 교체
+
+   Firestore Security Rules:
+   ─────────────────────────────────────────────────────────────
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /supplyRequests/{docId} {
+         allow read: if true;
+         allow create: if request.auth != null;
+         allow update, delete: if request.auth != null
+                               && request.auth.token.admin == true;
+       }
+       match /config/{docId} {
+         allow read: if true;
+         allow write: if request.auth != null
+                      && request.auth.token.admin == true;
+       }
+     }
+   }
+   ─────────────────────────────────────────────────────────────
+
+   관리자 custom claim 설정 방법 (Firebase Admin SDK):
+   const admin = require('firebase-admin');
+   admin.auth().setCustomUserClaims(uid, { admin: true });
+
+   또는 Firebase CLI + Cloud Functions 사용:
+   https://firebase.google.com/docs/auth/admin/custom-claims
+   ────────────────────────────────────────────────────────────── */
+const FB_CFG = {
+  apiKey:            "AIzaSyCR0Ji0gwrWKtQUXMz_NBaFwChHoJ1mMQM",
+  authDomain:        "nursing-supply.firebaseapp.com",
+  projectId:         "nursing-supply",
+  storageBucket:     "nursing-supply.firebasestorage.app",
+  messagingSenderId: "1090692751361",
+  appId:             "1:1090692751361:web:78fdfcf600d68a37eee000"
+};
+
+/* Firestore 컬렉션명 */
+const COL = 'supplyRequests';
+const CFG_DOC = 'config/app';
+
+/* ──────────────────────────────────────────────────────────────
+   [2] 앱 상수
+   ────────────────────────────────────────────────────────────── */
+const SDEPTS = ['사무팀','간호팀','요양팀','관리팀','간식팀'];
+const DCLS   = {'사무팀':'office','간호팀':'nursing','요양팀':'care','관리팀':'mgmt','간식팀':'snack'};
+const SUNITS = ['개','박스','묶음','팩','봉','캔','병','kg','L','인분'];
+const DCFG   = {
+  '사무팀':{cls:'office',icon:'📋',desc:'사무용품·복사지·문서',
+    ph:['A4 복사지 (500매/팩)','볼펜 (흑색 0.5mm 12개입)','포스트잇 (76×76mm 노랑)'],btn:'btn-office'},
+  '간호팀':{cls:'nursing',icon:'💊',desc:'의료소모품·위생용품',
+    ph:['라텍스 장갑 (중형 100개입)','KF94 마스크 (50개)','알코올솜 (100매×5봉)'],btn:'btn-nursing'},
+  '요양팀':{cls:'care',icon:'🤝',desc:'케어용품·활동자료',
+    ph:['물티슈 (100매×6팩)','성인 기저귀 (대형 30매)','방수 시트 (140×200cm)'],btn:'btn-care'},
+  '관리팀':{cls:'mgmt',icon:'🔧',desc:'청소용품·시설관리',
+    ph:['세탁 세제 (액체형 3kg)','살균 소독제 (1000ml)','쓰레기봉투 (50L 100매)'],btn:'btn-mgmt'},
+  '간식팀':{cls:'snack',icon:'🍬',desc:'간식·식품·음료 전용',
+    ph:['과자 혼합 세트 (어르신용)','식혜 캔 (200ml 30개)','저당 사탕 (1kg)'],btn:'btn-snack'}
+};
+
+/* ──────────────────────────────────────────────────────────────
+   [3] 앱 상태 (단일 진실 소스)
+   ──────────────────────────────────────────────────────────────
+   ⚠️  S.allData 는 onSnapshot이 Firestore에서 채워주는 읽기 전용 캐시.
+       직접 push/splice/assign 금지 — 항상 Firestore CRUD를 먼저 실행.
+   ────────────────────────────────────────────────────────────── */
+const S = {
+  /* Firebase */
+  db:          null,
+  auth:        null,
+  useFirebase: false,
+  currentUser: null,    // Firebase Auth 현재 사용자
+  isAdmin:     false,   // getIdTokenResult().claims.admin 확인 여부
+  unsub:       null,    // onSnapshot 구독 해제 함수
+  /* 데이터 캐시 (onSnapshot → 자동 갱신, 절대 직접 수정 금지) */
+  allData:     [],
+  /* UI 상태 */
+  isDeadline:  false,
+  adminFilter: { dept:'전체', status:'전체', month: curMonth() },
+  adminTab:    'supply',
+  editId:      null,
+  /* 비동기 제어 */
+  pending:     null,    // 관리자 로그인 후 실행할 콜백
+  cfmRes:      null,    // showConfirm Promise resolver
+};
+
+/* ──────────────────────────────────────────────────────────────
+   [4] Firebase 초기화 & 실시간 구독
+   ────────────────────────────────────────────────────────────── */
+function initFirebase() {
+  try {
+    if (FB_CFG.apiKey === 'YOUR_API_KEY') {
+      console.info('[v4.0] Firebase 미설정 → localStorage 폴백 모드');
+      setupLocalMode();
+      return;
+    }
+    firebase.initializeApp(FB_CFG);
+    S.db   = firebase.firestore();
+    S.auth = firebase.auth();
+    S.useFirebase = true;
+
+    /* 배지: Firebase 연결됨 표시 */
+    const mb = document.getElementById('modeBadge');
+    mb.className = 'mbadge fb';
+    mb.textContent = '☁️ Firebase';
+
+    /* 관리자 모달: Firebase 폼 표시 */
+    document.getElementById('adminFbForm').style.display = 'block';
+    document.getElementById('adminLocalForm').style.display = 'none';
+
+    /* 익명 로그인 (일반 사용자 — create 권한 부여) */
+    S.auth.signInAnonymously().catch(e => console.warn('익명 로그인 실패:', e));
+
+    /* Auth 상태 감시 */
+    S.auth.onAuthStateChanged(user => {
+      S.currentUser = user;
+      if (!user) S.isAdmin = false;
+    });
+
+    /* Firestore 실시간 구독 시작 */
+    subscribeSupply();
+
+    /* 앱 설정 구독 (마감 상태 등) */
+    subscribeConfig();
+
+    /* 마이그레이션 필요 여부 확인 */
+    checkMigrateBanner();
+
+  } catch (e) {
+    console.error('Firebase 초기화 실패:', e);
+    setupLocalMode();
+  }
+}
+
+/* localStorage 폴백 모드 설정 */
+function setupLocalMode() {
+  S.useFirebase = false;
+  document.getElementById('adminFbForm').style.display = 'none';
+  document.getElementById('adminLocalForm').style.display = 'block';
+  /* localStorage에서 데이터 로드 후 UI 갱신 */
+  S.allData = loadSLSCompat();
+  const cfg = loadCfgLS();
+  S.isDeadline = cfg.isDeadline || false;
+  refreshAll();
+  updateDLUI();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [5] onSnapshot 실시간 구독
+   ────────────────────────────────────────────────────────────── */
+
+/**
+ * subscribeSupply()
+ * Firestore의 supplyRequests 컬렉션을 실시간 구독.
+ * 데이터 변경(추가/수정/삭제) 시 자동으로 S.allData 갱신 → UI 재렌더링.
+ *
+ * 구조:
+ *   Firestore 변경 → onSnapshot 콜백 → S.allData 갱신 → refreshAll()
+ *
+ * ⚠️  이 함수가 유일한 UI 갱신 트리거 (수동 reloadData 금지)
+ */
+function subscribeSupply() {
+  if (!S.db) return;
+  /* 기존 구독 해제 */
+  if (S.unsub) { S.unsub(); S.unsub = null; }
+
+  const colRef = S.db.collection(COL).orderBy('createdAt', 'desc');
+  S.unsub = colRef.onSnapshot(
+    snapshot => {
+      /* Firestore 문서 → 앱 데이터로 변환 */
+      S.allData = snapshot.docs.map(doc => ({
+        id:          doc.id,
+        ...doc.data(),
+        /* Timestamp → 표시용 문자열 변환 */
+        timestampDisplay: tsToDisplay(doc.data().createdAt)
+      }));
+      refreshAll();           // UI 전체 갱신 (onSnapshot이 유일한 트리거)
+    },
+    err => {
+      console.error('onSnapshot 오류:', err);
+      toast('실시간 연결 오류. 새로고침해 주세요.', 'e');
+    }
+  );
+}
+
+/* 앱 설정(마감 등) 실시간 구독 */
+function subscribeConfig() {
+  if (!S.db) return;
+  S.db.doc(CFG_DOC).onSnapshot(doc => {
+    if (doc.exists) {
+      S.isDeadline = doc.data().isDeadline || false;
+      updateDLUI();
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [6] CRUD — 비품 (모든 쓰기는 Firestore 단방향)
+   ────────────────────────────────────────────────────────────── */
+
+/**
+ * addSupply(item)
+ * addDoc + serverTimestamp() 사용.
+ * onSnapshot이 자동으로 UI를 갱신하므로 refreshAll() 호출 불필요.
+ */
+async function addSupply(item) {
+  if (S.useFirebase) {
+    const TS = firebase.firestore.FieldValue.serverTimestamp();
+    await S.db.collection(COL).add({
+      ...item,
+      createdAt: TS,
+      updatedAt: TS
+    });
+    /* ← onSnapshot이 UI 갱신함. 여기서 refreshAll() 호출 금지 */
+  } else {
+    item.id               = uid('req');
+    item.timestampDisplay = fmtD(new Date());
+    S.allData.unshift(item);
+    saveSLS();
+    refreshAll();   // localStorage 모드에서만 직접 갱신
+  }
+}
+
+/**
+ * updSupply(id, data)
+ * updateDoc + updatedAt 갱신.
+ */
+async function updSupply(id, data) {
+  if (S.useFirebase) {
+    await S.db.collection(COL).doc(id).update({
+      ...data,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } else {
+    const i = S.allData.findIndex(d => d.id === id);
+    if (i >= 0) { S.allData[i] = { ...S.allData[i], ...data }; saveSLS(); refreshAll(); }
+  }
+}
+
+/**
+ * delSupply(id)
+ * 단건 삭제. 반드시 batchDelSupply([id]) 를 통해 호출.
+ * 직접 호출 금지 (batch 미사용 삭제 금지 규칙).
+ */
+async function _delOneFirestore(id) {
+  await S.db.collection(COL).doc(id).delete();
+}
+
+/**
+ * batchDelSupply(ids)
+ * ─────────────────────────────────────────────
+ * 핵심 삭제 함수. 단건 삭제도 반드시 이 함수를 통해 실행.
+ * writeBatch + 400건 단위 chunk 처리로 Firestore 500건 제한 안전 대응.
+ *
+ * 절차:
+ *   ids → 400개씩 분할
+ *   → 각 chunk별 writeBatch 생성
+ *   → batch.delete(docRef) × N
+ *   → batch.commit()
+ *   → 다음 chunk 반복
+ *
+ * onSnapshot이 자동으로 S.allData 갱신 → UI 재렌더링.
+ * ─────────────────────────────────────────────
+ */
+async function batchDelSupply(ids) {
+  if (!ids || ids.length === 0) return;
+
+  if (S.useFirebase) {
+    const chunks = chunkArr(ids, 400); // 400건 단위 (Firestore 500 제한 안전 마진)
+    for (const chunk of chunks) {
+      const batch = S.db.batch();
+      chunk.forEach(id => {
+        batch.delete(S.db.collection(COL).doc(id));
+      });
+      await batch.commit();
+      /* 각 batch commit 후 onSnapshot이 S.allData와 UI를 자동 갱신 */
+    }
+  } else {
+    /* localStorage 폴백: 일괄 제거 후 1회만 갱신 */
+    const idSet = new Set(ids);
+    S.allData = S.allData.filter(d => !idSet.has(d.id));
+    saveSLS();
+    refreshAll(); // localStorage 모드에서만 직접 갱신
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [7] Config CRUD
+   ────────────────────────────────────────────────────────────── */
+async function updCfg(data) {
+  if (S.useFirebase) {
+    await S.db.doc(CFG_DOC).set(data, { merge: true });
+  } else {
+    const c = loadCfgLS();
+    Object.assign(c, data);
+    localStorage.setItem('supplyCfg', JSON.stringify(c));
+    if ('isDeadline' in data) { S.isDeadline = data.isDeadline; updateDLUI(); }
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [8] localStorage 헬퍼 (폴백 모드용)
+   ────────────────────────────────────────────────────────────── */
+function saveSLS()   { try { localStorage.setItem('supplyData', JSON.stringify(S.allData)); } catch(e){} }
+function loadSLS()   { try { return JSON.parse(localStorage.getItem('supplyData') || '[]'); } catch(e){ return []; } }
+function loadSLSCompat() {
+  const d = loadSLS();
+  if (d.length) return d;
+  try { return JSON.parse(localStorage.getItem('nursingHomeSupply') || '[]'); } catch(e){ return []; }
+}
+function loadCfgLS() { try { return JSON.parse(localStorage.getItem('supplyCfg') || '{}'); } catch(e){ return {}; } }
+
+/* 마이그레이션 배너 */
+function checkMigrateBanner() {
+  if (loadSLSCompat().length > 0) document.getElementById('migBanner').classList.add('show');
+}
+async function migrateLS() {
+  const ls = loadSLSCompat();
+  if (!ls.length) { toast('이전할 데이터가 없습니다.','w'); return; }
+  const TS = firebase.firestore.FieldValue.serverTimestamp();
+  let cnt = 0;
+  for (const item of ls) {
+    const { id, timestampDisplay, ...rest } = item;
+    if (!rest.month)   rest.month  = (rest.timestamp || '').substr(0,7) || curMonth();
+    if (!rest.status)  rest.status = '구매대기';
+    if (!rest.unit)    rest.unit   = '개';
+    await S.db.collection(COL).add({ ...rest, createdAt: TS, updatedAt: TS });
+    cnt++;
+  }
+  localStorage.removeItem('nursingHomeSupply');
+  localStorage.removeItem('supplyData');
+  localStorage.removeItem('snackData');
+  document.getElementById('migBanner').classList.remove('show');
+  toast(`✅ ${cnt}건 마이그레이션 완료!`, 's');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [9] 관리자 인증
+   ──────────────────────────────────────────────────────────────
+   Firebase 모드: 이메일/비밀번호 로그인 → custom claim(admin) 확인
+   localStorage 모드: 해시 기반 비밀번호 확인
+   ────────────────────────────────────────────────────────────── */
+
+/**
+ * requireAdmin(fn)
+ * 관리자 권한이 필요한 모든 작업의 게이트웨이.
+ * S.isAdmin이 이미 true이면 즉시 fn() 실행.
+ * 아니면 로그인 모달을 열고 S.pending에 콜백 저장.
+ *
+ * async fn()의 에러를 catch로 명시적 처리 (unhandled rejection 방지).
+ */
+function requireAdmin(fn) {
+  if (S.isAdmin) {
+    Promise.resolve(fn()).catch(e => {
+      console.error('[관리자 작업 오류]', e);
+      toast('오류: ' + (e.message || e), 'e');
+    });
+    return;
+  }
+  S.pending = fn;
+  /* 모달 초기화 */
+  document.getElementById('adminLoginErr').textContent = '';
+  document.getElementById('adminLoginErr').style.display = 'none';
+  if (document.getElementById('adminEmail')) document.getElementById('adminEmail').value = '';
+  document.getElementById('adminPw').value = '';
+  if (document.getElementById('adminPwLocal')) document.getElementById('adminPwLocal').value = '';
+  openOvl('adminModal');
+}
+
+/**
+ * doAdminLogin()
+ * Firebase 모드: signInWithEmailAndPassword → getIdTokenResult → admin claim 확인
+ * localStorage 모드: 해시 비밀번호 확인
+ */
+async function doAdminLogin() {
+  const errEl  = document.getElementById('adminLoginErr');
+  const loginBtn = document.getElementById('adminLoginBtn');
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  loginBtn.disabled = true;
+
+  try {
+    if (S.useFirebase) {
+      /* Firebase Auth: 이메일 + 비밀번호 */
+      const email = (document.getElementById('adminEmail').value || '').trim();
+      const pw    = document.getElementById('adminPw').value;
+      if (!email || !pw) throw new Error('이메일과 비밀번호를 모두 입력해 주세요.');
+
+      const cred = await S.auth.signInWithEmailAndPassword(email, pw);
+      S.currentUser = cred.user;
+
+      /* custom claim 확인: admin == true 여부 */
+      const tokenResult = await cred.user.getIdTokenResult(true); // forceRefresh=true
+      if (!tokenResult.claims.admin) {
+        /* admin claim 없음 → 로그아웃 후 거부 */
+        await S.auth.signOut();
+        await S.auth.signInAnonymously(); // 익명으로 복귀
+        S.currentUser = S.auth.currentUser;
+        throw new Error('이 계정은 관리자 권한이 없습니다.\n(Firebase 콘솔에서 admin claim을 설정해 주세요)');
+      }
+
+      S.isAdmin = true;
+      closeOvl('adminModal');
+      toast(`✅ 관리자(${email})로 로그인됨`, 's');
+
+    } else {
+      /* localStorage 모드: 해시 비밀번호 */
+      const pw = document.getElementById('adminPwLocal').value;
+      if (!chkPw(pw)) throw new Error('비밀번호가 올바르지 않습니다. (초기값: admin1234)');
+      S.isAdmin = true;
+      closeOvl('adminModal');
+      toast('✅ 관리자로 로그인되었습니다.', 's');
+    }
+
+    /* 로그인 성공 → pending 콜백 실행 */
+    if (S.pending) {
+      const fn = S.pending;
+      S.pending = null;
+      Promise.resolve(fn()).catch(e => {
+        console.error('[관리자 작업 오류]', e);
+        toast('오류: ' + (e.message || e), 'e');
+      });
+    }
+
+  } catch (e) {
+    let msg = e.message || '로그인 중 오류가 발생했습니다.';
+    /* Firebase Auth 에러 코드 한국어 변환 */
+    if (e.code === 'auth/user-not-found')    msg = '등록되지 않은 이메일입니다.';
+    if (e.code === 'auth/wrong-password')    msg = '비밀번호가 올바르지 않습니다.';
+    if (e.code === 'auth/invalid-email')     msg = '올바른 이메일 형식이 아닙니다.';
+    if (e.code === 'auth/too-many-requests') msg = '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+    errEl.textContent    = '❌ ' + msg;
+    errEl.style.display  = 'block';
+  } finally {
+    loginBtn.disabled = false;
+  }
+}
+
+/* localStorage 모드 전용: 해시 비밀번호 */
+function sh(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h = h & h; }
+  return String(Math.abs(h));
+}
+function getAdminH() { return localStorage.getItem('adminHash') || sh('admin1234'); }
+function chkPw(pw)   { return sh(pw) === getAdminH(); }
+
+/* 관리자 탭 진입 */
+function openAdminTab() {
+  requireAdmin(() => {
+    showPanel('관리자');
+    renderAdminView();
+    updateStats();
+  });
+}
+
+/* 비밀번호 표시/숨김 토글 */
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁️' : '🙈';
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [10] 커스텀 Confirm 모달 (window.confirm 완전 대체)
+   ────────────────────────────────────────────────────────────── */
+function showConfirm(title, msg, sub = '', okLabel = '확인', danger = true) {
+  return new Promise(res => {
+    S.cfmRes = res;
+    document.getElementById('cfmTitle').textContent = title;
+    document.getElementById('cfmMsg').textContent   = msg;
+    const subEl = document.getElementById('cfmSub');
+    subEl.textContent = sub;
+    subEl.style.display = sub ? 'block' : 'none';
+    const ok = document.getElementById('cfmOk');
+    ok.textContent = okLabel;
+    ok.className   = danger ? 'btn btn-danger' : 'btn btn-primary';
+    openOvl('cfmModal');
+  });
+}
+function cfmAnswer(ok) {
+  closeOvl('cfmModal');
+  if (S.cfmRes) { S.cfmRes(ok); S.cfmRes = null; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [11] 탭 전환
+   ────────────────────────────────────────────────────────────── */
+function switchTab(d) { showPanel(d); }
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('act'));
+  document.querySelectorAll('.tbtn').forEach(b => b.classList.remove('act'));
+  document.getElementById('panel-' + name).classList.add('act');
+  const tb = document.querySelector(`.tbtn[data-d="${name}"]`);
+  if (tb) tb.classList.add('act');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [12] 비품 패널 빌드
+   ────────────────────────────────────────────────────────────── */
+function buildSupplyPanel(dept) {
+  const c  = DCFG[dept];
+  const ph = c.ph[Math.floor(Math.random() * c.ph.length)];
+  document.getElementById('panel-' + dept).innerHTML = `
+    <div class="dbanner ${c.cls}">
+      <div><div class="dbtitle">${c.icon} ${dept} 비품 요청</div>
+      <div class="dbsub">${c.desc}</div></div>
+    </div>
+    <div class="dl-ov" id="dl-${dept}">
+      <h3>🔒 요청 마감</h3>
+      <p>현재 비품 요청이 마감 상태입니다.</p>
+    </div>
+    <div class="card" id="fc-${dept}">
+      <div class="card-hd">✏️ 구매 요청 입력</div>
+      <div class="fgrid">
+        <div class="fg full">
+          <label class="lbl">제품명 <span class="req">*</span></label>
+          <div class="ac-wrap">
+            <input type="text" class="inp" id="fn-${dept}" autocomplete="off"
+              placeholder="예: ${ph}"
+              oninput="onNameIn(this,'${dept}')" onblur="hideAC('${dept}')">
+            <div class="ac-list" id="ac-${dept}"></div>
+          </div>
+          <div class="warn-msg" id="fmt-${dept}">
+            💡 규격을 괄호로 추가하면 좋습니다. 예: <strong>볼펜 (흑색 0.5mm 12개입)</strong>
+          </div>
+          <div class="warn-msg" id="dup-${dept}">
+            ⚠️ 유사한 제품명이 이미 요청되어 있습니다. 중복 확인해 주세요.
+          </div>
+          <div class="err-msg" id="en-fn-${dept}">제품명을 입력해 주세요.</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">사이즈/규격 <span class="req">*</span></label>
+          <input type="text" class="inp" id="sz-${dept}" placeholder="예: 대형 / A4 / 100ml">
+          <div class="err-msg" id="en-sz-${dept}">규격을 입력해 주세요.</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">수량 <span class="req">*</span></label>
+          <div class="qty-row">
+            <input type="number" class="inp" id="qt-${dept}" placeholder="5" min="1" max="9999">
+            <select class="sel" id="ut-${dept}">${SUNITS.map(u=>`<option>${u}</option>`).join('')}</select>
+          </div>
+          <div class="err-msg" id="en-qt-${dept}">수량을 입력해 주세요.</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">구매 링크 <span class="opt">선택</span></label>
+          <input type="url" class="inp" id="lk-${dept}" placeholder="https://www.coupang.com/...">
+          <div class="err-msg" id="en-lk-${dept}">올바른 URL을 입력해 주세요.</div>
+        </div>
+        <div class="fg">
+          <label class="lbl">비고 <span class="opt">선택</span></label>
+          <textarea class="txa" id="no-${dept}" placeholder="브랜드, 특이사항 등"></textarea>
+        </div>
+        <div class="fg">
+          <label class="lbl">작성자 이름 <span class="req">*</span></label>
+          <input type="text" class="inp" id="wr-${dept}" placeholder="예: 홍길동">
+          <div class="hint">다음 접속 시 자동 입력됩니다</div>
+          <div class="err-msg" id="en-wr-${dept}">작성자 이름을 입력해 주세요.</div>
+        </div>
+      </div>
+      <div style="margin-top:1.25rem;display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="resetSF('${dept}')">초기화</button>
+        <button class="btn btn-lg ${c.btn}" id="sb-${dept}" onclick="submitSupply('${dept}')">
+          ✅ 구매 요청 등록
+        </button>
+      </div>
+    </div>
+    <div id="list-${dept}"></div>`;
+
+  /* 작성자 이름 자동 복원 */
+  const saved = localStorage.getItem('wr_' + dept) || localStorage.getItem('lastWriter') || '';
+  const wrEl  = document.getElementById('wr-' + dept);
+  if (wrEl && saved) wrEl.value = saved;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [13] 폼 제출 — 비품
+   ────────────────────────────────────────────────────────────── */
+async function submitSupply(dept) {
+  if (S.isDeadline) { toast('⚠️ 현재 요청이 마감 상태입니다.', 'w'); return; }
+  if (!valSupply(dept)) { toast('입력 항목을 확인해 주세요.', 'e'); return; }
+
+  const writer = gv('wr-' + dept);
+  localStorage.setItem('wr_' + dept, writer);
+  localStorage.setItem('lastWriter', writer);
+
+  const now  = new Date();
+  /* Firestore 스키마에 맞춘 문서 구조 (id/createdAt/updatedAt 제외 — addDoc에서 처리) */
+  const item = {
+    department:  dept,
+    productName: gv('fn-' + dept),
+    size:        gv('sz-' + dept),
+    quantity:    parseInt(gv('qt-' + dept)),
+    unit:        gv('ut-' + dept) || '개',
+    link:        gv('lk-' + dept),
+    note:        gv('no-' + dept),
+    writer,
+    status:      '구매대기',
+    month:       fmtM(now),
+    /* localStorage 폴백용 타임스탬프 (Firebase 모드에서는 serverTimestamp 사용) */
+    timestamp:   now.toISOString()
+  };
+
+  const btn = document.getElementById('sb-' + dept);
+  if (btn) btn.disabled = true;
+  try {
+    await addSupply(item);
+    resetSF(dept);
+    toast(`✅ ${dept} - "${item.productName}" 등록!`, 's');
+  } catch (e) {
+    console.error('addSupply 오류:', e);
+    toast('저장 중 오류: ' + (e.message || e), 'e');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function valSupply(dept) {
+  let ok = true;
+  const chk = (id, eid, cond) => {
+    const el = document.getElementById(id), er = document.getElementById(eid);
+    if (!el || !er) return;
+    if (!cond(el.value)) { el.classList.add('err'); er.style.display = 'block'; ok = false; }
+    else { el.classList.remove('err'); er.style.display = 'none'; }
+  };
+  chk('fn-' + dept, 'en-fn-' + dept, v => v.trim().length > 0);
+  chk('sz-' + dept, 'en-sz-' + dept, v => v.trim().length > 0);
+  chk('qt-' + dept, 'en-qt-' + dept, v => v.trim() !== '' && parseInt(v) >= 1);
+  chk('wr-' + dept, 'en-wr-' + dept, v => v.trim().length > 0);
+  const lk = document.getElementById('lk-' + dept);
+  const le = document.getElementById('en-lk-' + dept);
+  if (lk && lk.value.trim()) {
+    try { new URL(lk.value.trim()); lk.classList.remove('err'); le.style.display = 'none'; }
+    catch { lk.classList.add('err'); le.style.display = 'block'; ok = false; }
+  }
+  return ok;
+}
+
+function resetSF(dept) {
+  ['fn-','sz-','qt-','lk-','no-'].forEach(p => {
+    const el = document.getElementById(p + dept);
+    if (el) { el.value = ''; el.classList.remove('err'); }
+  });
+  const ut = document.getElementById('ut-' + dept);
+  if (ut) ut.value = '개';
+  document.querySelectorAll(`#fc-${dept} .err-msg`).forEach(e => e.style.display = 'none');
+  ['fmt-','dup-'].forEach(p => { const e = document.getElementById(p + dept); if (e) e.style.display = 'none'; });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [14] 자동완성 & 중복 감지
+   ────────────────────────────────────────────────────────────── */
+function norm(s) {
+  return s.toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[()（）\[\]【】]/g, '')
+    .replace(/[-_,·]/g, '');
+}
+function similar(a, b) {
+  const na = norm(a), nb = norm(b);
+  return na === nb || (na.length >= 3 && nb.includes(na)) || (nb.length >= 3 && na.includes(nb));
+}
+function hasSpec(nm) { return /\(.*\)/.test(nm) || /（.*）/.test(nm); }
+
+function onNameIn(el, dept) {
+  const val = el.value.trim();
+  if (!val) { hideAC(dept); ['fmt-','dup-'].forEach(p => { const e = document.getElementById(p + dept); if (e) e.style.display = 'none'; }); return; }
+  showH('fmt-' + dept, val.length > 2 && !hasSpec(val));
+  showH('dup-' + dept, S.allData.some(d => d.department === dept && similar(d.productName, val)));
+  renderAC('ac-' + dept, val, S.allData.map(d => d.productName), `pickAC('${dept}','%v')`);
+}
+function renderAC(listId, val, names, tpl) {
+  const favs = loadFavs();
+  const cands = []; const seen = new Set();
+  favs.forEach(f => { if (!seen.has(f) && f.toLowerCase().includes(val.toLowerCase())) { seen.add(f); cands.push({n:f, fav:true}); } });
+  names.forEach(n => { if (!seen.has(n) && n.toLowerCase().includes(val.toLowerCase())) { seen.add(n); cands.push({n, fav:false}); } });
+  const list = document.getElementById(listId);
+  if (!list || !cands.length) { if (list) list.style.display = 'none'; return; }
+  list.innerHTML = cands.slice(0, 7).map(c => `
+    <div class="ac-item" onmousedown="${tpl.replace('%v', c.n.replace(/'/g, "\\'"))}">
+      <span>${esc(c.n)}</span>
+      <span class="ac-tag ${c.fav ? 'ac-fav' : 'ac-hist'}">${c.fav ? '★ 즐겨찾기' : '최근'}</span>
+    </div>`).join('');
+  list.style.display = 'block';
+}
+function pickAC(dept, val) {
+  const el = document.getElementById('fn-' + dept);
+  if (el) el.value = val;
+  setTimeout(() => { const l = document.getElementById('ac-' + dept); if (l) l.style.display = 'none'; }, 100);
+}
+function hideAC(id) { setTimeout(() => { const l = document.getElementById('ac-' + id); if (l) l.style.display = 'none'; }, 200); }
+function loadFavs() { try { return JSON.parse(localStorage.getItem('favs') || '[]'); } catch(e) { return []; } }
+function saveFavs(f) { localStorage.setItem('favs', JSON.stringify(f)); }
+function toggleFav(nm, btn) {
+  let f = loadFavs();
+  if (f.includes(nm)) { f = f.filter(x => x !== nm); btn.textContent = '☆'; toast('즐겨찾기 제거', 'w'); }
+  else { f.push(nm); btn.textContent = '★'; toast('⭐ 즐겨찾기 추가', 's'); }
+  saveFavs(f);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [15] 비품 목록 렌더링 (부서 패널용 — 이번 달만 표시)
+   ────────────────────────────────────────────────────────────── */
+function renderSupplyList(dept) {
+  const cur  = curMonth();
+  const data = S.allData.filter(d => d.department === dept && (d.month || '') === cur);
+  const cont = document.getElementById('list-' + dept);
+  if (!cont) return;
+
+  let h = `<div class="card">
+    <div class="card-hd" style="justify-content:space-between">
+      <span>📝 이번 달 요청 (${data.length}건)</span>
+      <span style="font-size:.75rem;color:var(--text2)">${cur}</span>
+    </div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr>
+        <th>#</th><th>제품명</th><th>규격</th><th>수량</th>
+        <th>링크</th><th>비고</th><th>상태</th><th>작성자</th><th>등록시간</th><th>관리</th>
+      </tr></thead><tbody>`;
+
+  if (!data.length) {
+    h += `<tr><td colspan="10" class="empty"><span class="empty-ic">📭</span>이번 달 등록된 요청이 없습니다</td></tr>`;
+  } else {
+    data.forEach((item, i) => {
+      const cp  = `https://www.coupang.com/np/search?q=${encodeURIComponent(item.productName)}`;
+      const lh  = item.link
+        ? `<a class="alink" href="${esc(item.link)}" target="_blank" rel="noopener">🔗 링크</a>`
+        : `<a class="btn-cp" href="${cp}" target="_blank" rel="noopener">쿠팡 검색</a>`;
+      const favs = loadFavs();
+      h += `<tr>
+        <td style="color:var(--text3);font-size:.75rem">${i + 1}</td>
+        <td><div style="display:flex;align-items:center;gap:4px">
+          <strong>${esc(item.productName)}</strong>
+          <button class="fav-btn" onclick="toggleFav('${item.productName.replace(/'/g,"\\'") }',this)">
+            ${favs.includes(item.productName) ? '★' : '☆'}
+          </button></div></td>
+        <td>${esc(item.size)}</td>
+        <td><strong>${item.quantity}</strong> ${esc(item.unit || '개')}</td>
+        <td>${lh}</td>
+        <td style="max-width:110px;word-break:break-all;font-size:.78rem">
+          ${item.note ? esc(item.note) : '<span style="color:var(--text3)">-</span>'}
+        </td>
+        <td><span class="sbadge ${item.status === '구매완료' ? 'done' : 'wait'}">
+          ${item.status === '구매완료' ? '✅' : '⏳'} ${item.status || '구매대기'}
+        </span></td>
+        <td>${esc(item.writer)}</td>
+        <td style="font-size:.74rem;color:var(--text2);white-space:nowrap">${item.timestampDisplay || ''}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="openEditSupply('${item.id}')" style="margin-right:3px">수정</button>
+          <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #FCA5A5"
+            onclick="confirmDelSupply('${item.id}','${esc(item.productName)}')">삭제</button>
+        </td></tr>`;
+    });
+  }
+  h += `</tbody></table></div></div>`;
+  cont.innerHTML = h;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [16] 삭제 확인 & 상태 변경
+   ────────────────────────────────────────────────────────────── */
+async function confirmDelSupply(id, nm) {
+  requireAdmin(async () => {
+    const ok = await showConfirm('비품 삭제', `"${nm}"\n이 항목을 삭제하시겠습니까?`, '', '삭제');
+    if (!ok) return;
+    try {
+      await batchDelSupply([id]); // 단건도 batchDel 통해 실행 (규칙 일관성)
+      toast('🗑️ 삭제되었습니다.', 's');
+    } catch (e) { toast('삭제 오류: ' + e.message, 'e'); }
+  });
+}
+
+async function toggleSStatus(id) {
+  requireAdmin(async () => {
+    const item = S.allData.find(d => d.id === id);
+    if (!item) return;
+    const ns = item.status === '구매완료' ? '구매대기' : '구매완료';
+    try {
+      await updSupply(id, { status: ns });
+      toast(ns === '구매완료' ? '✅ 구매 완료 처리' : '↩️ 구매 대기로 변경', 's');
+    } catch (e) { toast('상태 변경 오류: ' + e.message, 'e'); }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [17] 수정 모달
+   ────────────────────────────────────────────────────────────── */
+function openEditSupply(id) {
+  requireAdmin(() => {
+    const item = S.allData.find(d => d.id === id);
+    if (!item) return;
+    S.editId = id;
+    document.getElementById('editSupplyContent').innerHTML = `
+      <div class="fgrid">
+        <div class="fg full"><label class="lbl">제품명 <span class="req">*</span></label>
+          <input type="text" class="inp" id="e-fn" value="${esc(item.productName)}"></div>
+        <div class="fg"><label class="lbl">규격 <span class="req">*</span></label>
+          <input type="text" class="inp" id="e-sz" value="${esc(item.size)}"></div>
+        <div class="fg"><label class="lbl">수량 <span class="req">*</span></label>
+          <div class="qty-row">
+            <input type="number" class="inp" id="e-qt" value="${item.quantity}" min="1">
+            <select class="sel" id="e-ut">${SUNITS.map(u=>`<option ${u===item.unit?'selected':''}>${u}</option>`).join('')}</select>
+          </div></div>
+        <div class="fg full"><label class="lbl">구매 링크 <span class="opt">선택</span></label>
+          <input type="url" class="inp" id="e-lk" value="${esc(item.link||'')}"></div>
+        <div class="fg full"><label class="lbl">비고 <span class="opt">선택</span></label>
+          <textarea class="txa" id="e-no">${esc(item.note||'')}</textarea></div>
+        <div class="fg"><label class="lbl">작성자 <span class="req">*</span></label>
+          <input type="text" class="inp" id="e-wr" value="${esc(item.writer)}"></div>
+        <div class="fg"><label class="lbl">상태</label>
+          <select class="sel" id="e-st">
+            <option ${item.status==='구매대기'?'selected':''}>구매대기</option>
+            <option ${item.status==='구매완료'?'selected':''}>구매완료</option>
+          </select></div>
+      </div>`;
+    openOvl('editSupplyModal');
+  });
+}
+
+async function saveEditSupply() {
+  const fn = gv('e-fn'), sz = gv('e-sz'), qt = parseInt(gv('e-qt')), wr = gv('e-wr');
+  if (!fn || !sz || !qt || qt < 1 || !wr) { toast('필수 항목을 모두 입력해 주세요.', 'e'); return; }
+  try {
+    await updSupply(S.editId, {
+      productName: fn, size: sz, quantity: qt,
+      unit: gv('e-ut'), link: gv('e-lk'), note: gv('e-no'), writer: wr, status: gv('e-st')
+    });
+    closeOvl('editSupplyModal');
+    toast('✅ 수정되었습니다.', 's');
+  } catch (e) { toast('수정 오류: ' + e.message, 'e'); }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [18] 관리자 뷰 전환 & 렌더링
+   ────────────────────────────────────────────────────────────── */
+function switchAdminTab(tab) {
+  S.adminTab = tab;
+  ['supply','sum'].forEach(t => {
+    const btn  = document.getElementById('atab-' + t);
+    const view = document.getElementById('adm-' + t);
+    const on   = t === tab;
+    if (btn)  btn.classList.toggle('on', on);
+    if (view) view.style.display = on ? 'block' : 'none';
+  });
+  renderAdminView();
+}
+
+function renderAdminView() {
+  if (S.adminTab === 'supply') renderAdmSupply();
+  else renderAdmSum();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [19] 관리자 비품 테이블
+   ────────────────────────────────────────────────────────────── */
+function getFiltS() {
+  let d = [...S.allData];
+  const f = S.adminFilter;
+  if (f.month !== 'all') d = d.filter(i => (i.month || '') === f.month);
+  if (f.dept  !== '전체') d = d.filter(i => i.department === f.dept);
+  if (f.status !== '전체') d = d.filter(i => (i.status || '구매대기') === f.status);
+  return d;
+}
+
+function renderAdmSupply() {
+  const data = getFiltS();
+  let h = `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+    <th>#</th><th>부서</th><th>제품명</th><th>규격</th><th>수량</th>
+    <th>링크</th><th>비고</th><th>상태</th><th>작성자</th><th>등록시간</th><th>관리</th>
+  </tr></thead><tbody>`;
+
+  if (!data.length) {
+    h += `<tr><td colspan="11" class="empty"><span class="empty-ic">📭</span>조건에 맞는 요청이 없습니다</td></tr>`;
+  } else {
+    data.forEach((item, i) => {
+      const cls = DCLS[item.department] || 'office';
+      const cp  = `https://www.coupang.com/np/search?q=${encodeURIComponent(item.productName)}`;
+      const lh  = item.link
+        ? `<a class="alink" href="${esc(item.link)}" target="_blank">🔗</a>`
+        : `<a class="btn-cp" href="${cp}" target="_blank">쿠팡</a>`;
+      h += `<tr>
+        <td style="color:var(--text3);font-size:.74rem">${i + 1}</td>
+        <td><span class="dtag ${cls}">${item.department}</span></td>
+        <td><strong>${esc(item.productName)}</strong></td>
+        <td>${esc(item.size)}</td>
+        <td><strong>${item.quantity}</strong> ${esc(item.unit||'개')}</td>
+        <td>${lh}</td>
+        <td style="max-width:100px;word-break:break-all;font-size:.77rem">
+          ${item.note ? esc(item.note) : '<span style="color:var(--text3)">-</span>'}
+        </td>
+        <td>
+          <button onclick="toggleSStatus('${item.id}')" style="background:none;border:none;cursor:pointer"
+            title="클릭으로 상태 변경 (관리자 전용)">
+            <span class="sbadge ${item.status === '구매완료' ? 'done' : 'wait'}">
+              ${item.status === '구매완료' ? '✅' : '⏳'} ${item.status || '구매대기'}
+            </span>
+          </button>
+        </td>
+        <td>${esc(item.writer)}</td>
+        <td style="font-size:.72rem;color:var(--text2);white-space:nowrap">${item.timestampDisplay || ''}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="openEditSupply('${item.id}')" style="margin-right:3px">수정</button>
+          <button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:1px solid #FCA5A5"
+            onclick="confirmDelSupply('${item.id}','${esc(item.productName)}')">삭제</button>
+        </td></tr>`;
+    });
+  }
+  h += `</tbody></table></div>`;
+  document.getElementById('supplyTableWrap').innerHTML = h;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [20] 품목 합산 뷰
+   ────────────────────────────────────────────────────────────── */
+function renderAdmSum() {
+  const data   = getFiltS();
+  const groups = {};
+  data.forEach(item => {
+    const k = norm(item.productName) + '|' + (item.unit || '개');
+    if (!groups[k]) groups[k] = { name: item.productName, unit: item.unit||'개', total: 0, depts: [] };
+    groups[k].total += item.quantity || 0;
+    if (!groups[k].depts.includes(item.department)) groups[k].depts.push(item.department);
+  });
+
+  const sorted = Object.values(groups).sort((a, b) => b.total - a.total);
+  if (!sorted.length) {
+    document.getElementById('sumWrap').innerHTML =
+      `<div class="empty"><span class="empty-ic">📭</span>합산할 데이터가 없습니다</div>`;
+    return;
+  }
+
+  const html = `<p style="font-size:.82rem;color:var(--text2);margin-bottom:.8rem">
+    총 ${sorted.length}개 품목, ${data.length}건 요청 (동일 품목 수량 합산)
+  </p>` + sorted.map(g => `
+    <div class="sum-card">
+      <div>
+        <div class="sum-nm">${esc(g.name)}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+          ${g.depts.map(d=>`<span class="dtag ${DCLS[d]||'office'}" style="font-size:.7rem">${d}</span>`).join('')}
+        </div>
+      </div>
+      <div class="sum-qty">${g.total}
+        <span style="font-size:.82rem;font-weight:500;color:var(--text2);margin-left:4px">${esc(g.unit)}</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('sumWrap').innerHTML = html;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [21] 통계 & 배지
+   ────────────────────────────────────────────────────────────── */
+function updateStats() {
+  const d = S.allData;
+  st('st-total', d.length);
+  st('st-wait',  d.filter(i => (i.status || '구매대기') === '구매대기').length);
+  st('st-done',  d.filter(i => i.status === '구매완료').length);
+  SDEPTS.forEach(dept => st('st-' + dept, d.filter(i => i.department === dept).length));
+}
+function updateBadges() {
+  const cur = curMonth();
+  SDEPTS.forEach(dept => st('b-' + dept, S.allData.filter(d => d.department === dept && (d.month||'') === cur).length));
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [22] 월별 필터
+   ────────────────────────────────────────────────────────────── */
+function onMonthChange() {
+  const v = document.getElementById('supplyMonth').value;
+  S.adminFilter.month = v || 'all';
+  renderAdminView(); updateStats();
+}
+function setMonth(type, mode) {
+  const el = document.getElementById('supplyMonth');
+  const m  = mode === 'current' ? curMonth() : '';
+  if (el) el.value = m;
+  S.adminFilter.month = m || 'all';
+  renderAdminView(); updateStats();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [23] 필터 버튼
+   ────────────────────────────────────────────────────────────── */
+function applyF(key, val, btn) {
+  document.querySelectorAll(`.fbtn[data-f="${key}"]`).forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if (key === 'sdept')   S.adminFilter.dept   = val;
+  if (key === 'sstatus') S.adminFilter.status = val;
+  renderAdminView(); updateStats();
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [24] 마감 기능
+   ────────────────────────────────────────────────────────────── */
+async function toggleDeadline() {
+  requireAdmin(async () => {
+    const ns  = !S.isDeadline;
+    const ok  = await showConfirm(
+      ns ? '요청 마감' : '마감 해제',
+      ns ? '마감 중에는 신규 비품 요청이 불가합니다.\n마감하시겠습니까?' : '마감을 해제하시겠습니까?',
+      '', ns ? '마감' : '해제', ns
+    );
+    if (!ok) return;
+    await updCfg({ isDeadline: ns });
+    toast(ns ? '🔒 요청이 마감되었습니다.' : '🔓 마감이 해제되었습니다.', ns ? 'w' : 's');
+  });
+}
+function updateDLUI() {
+  document.getElementById('dlBanner').classList.toggle('on', S.isDeadline);
+  const btn = document.getElementById('dlBtn');
+  if (btn) btn.textContent = S.isDeadline ? '🔓 마감 해제' : '🔒 요청 마감';
+  SDEPTS.forEach(dept => {
+    const ov = document.getElementById('dl-' + dept);
+    const fc = document.getElementById('fc-' + dept);
+    if (ov) ov.classList.toggle('on', S.isDeadline);
+    if (fc) fc.style.display = S.isDeadline ? 'none' : 'block';
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [25] 🔥 월별 초기화 (핵심 버그 수정)
+   ──────────────────────────────────────────────────────────────
+   Firebase 모드: getDocs(query(where)) → id 배열 → batchDelSupply
+   localStorage 모드: 메모리 필터 → batchDelSupply
+   ────────────────────────────────────────────────────────────── */
+function showMonthResetModal() {
+  requireAdmin(() => {
+    document.getElementById('monthResetInput').value = curMonth();
+    openOvl('monthResetModal');
+  });
+}
+
+async function execMonthReset() {
+  const m = document.getElementById('monthResetInput').value;
+  if (!m) { toast('초기화할 월을 선택해 주세요.', 'w'); return; }
+
+  /* 삭제 대상 ID 수집 */
+  let ids = [];
+  if (S.useFirebase) {
+    /* Firestore query: month == 선택월 */
+    const snap = await S.db.collection(COL)
+      .where('month', '==', m)
+      .get();
+    ids = snap.docs.map(d => d.id);
+  } else {
+    ids = S.allData.filter(d => (d.month || '') === m).map(d => d.id);
+  }
+
+  if (!ids.length) {
+    toast(`${m} 에 해당하는 데이터가 없습니다.`, 'w');
+    closeOvl('monthResetModal');
+    return;
+  }
+
+  closeOvl('monthResetModal');
+
+  const ok = await showConfirm(
+    '월별 초기화',
+    `${m} 비품 요청 ${ids.length}건을 모두 삭제합니다.`,
+    '이 작업은 되돌릴 수 없습니다.',
+    `${ids.length}건 삭제`
+  );
+  if (!ok) return;
+
+  try {
+    await batchDelSupply(ids); // writeBatch 400건 chunk 처리
+    toast(`🗑️ ${m} ${ids.length}건 삭제 완료.`, 's');
+    if (isAdmActive()) { renderAdminView(); updateStats(); }
+  } catch (e) {
+    console.error('월별 초기화 오류:', e);
+    toast('초기화 오류: ' + e.message, 'e');
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [26] 🔥 전체 초기화 (핵심 버그 수정)
+   ──────────────────────────────────────────────────────────────
+   Firebase 모드: getDocs(전체) → id 배열 → batchDelSupply
+   localStorage 모드: 메모리 전체 → batchDelSupply
+   ────────────────────────────────────────────────────────────── */
+function showClearAllModal() {
+  requireAdmin(async () => {
+    /* 삭제 전에 실제 건수 확인 */
+    let ids = [];
+    if (S.useFirebase) {
+      const snap = await S.db.collection(COL).get();
+      ids = snap.docs.map(d => d.id);
+    } else {
+      ids = S.allData.map(d => d.id);
+    }
+
+    if (!ids.length) { toast('삭제할 데이터가 없습니다.', 'w'); return; }
+
+    /* 1차 확인 */
+    const ok1 = await showConfirm(
+      '전체 초기화',
+      `비품 요청 전체 ${ids.length}건을 삭제합니다.`,
+      '⚠️ 이 작업은 되돌릴 수 없습니다!',
+      `${ids.length}건 전체 삭제`
+    );
+    if (!ok1) return;
+
+    /* 2차 확인 */
+    const ok2 = await showConfirm(
+      '최종 확인',
+      '정말로 전체 데이터를 삭제하시겠습니까?\n삭제 후 복구가 불가능합니다.',
+      '', '최종 삭제 확인'
+    );
+    if (!ok2) return;
+
+    try {
+      await batchDelSupply(ids);
+      toast(`🗑️ 전체 초기화 완료 (${ids.length}건 삭제).`, 's');
+      if (isAdmActive()) { renderAdminView(); updateStats(); }
+    } catch (e) {
+      console.error('전체 초기화 오류:', e);
+      toast('초기화 오류: ' + e.message, 'e');
+    }
+  });
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [27] 복사 & 내보내기
+   ────────────────────────────────────────────────────────────── */
+function copyList() {
+  const data = getFiltS();
+  if (!data.length) { toast('복사할 항목이 없습니다.', 'w'); return; }
+  let txt = `[비품 구매 요청 목록] ${fmtD(new Date())}\n${'='.repeat(50)}\n`;
+  const grps = {};
+  data.forEach(d => { if (!grps[d.department]) grps[d.department] = []; grps[d.department].push(d); });
+  Object.entries(grps).forEach(([dept, items]) => {
+    txt += `\n▶ ${dept} (${items.length}건)\n${'-'.repeat(30)}\n`;
+    items.forEach((item, i) => {
+      txt += `${i+1}. ${item.productName}\n`;
+      txt += `   규격: ${item.size} | 수량: ${item.quantity}${item.unit||'개'}\n`;
+      if (item.link) txt += `   링크: ${item.link}\n`;
+      if (item.note) txt += `   비고: ${item.note}\n`;
+      txt += `   상태: ${item.status} | 작성자: ${item.writer}\n\n`;
+    });
+  });
+  navigator.clipboard.writeText(txt)
+    .then(() => toast('📋 클립보드에 복사됨!', 's'))
+    .catch(() => {
+      const el = document.createElement('textarea');
+      el.value = txt; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); el.remove();
+      toast('📋 복사 완료!', 's');
+    });
+}
+
+function exportCSV() {
+  const data = getFiltS();
+  if (!data.length) { toast('데이터가 없습니다.', 'w'); return; }
+  const hdrs = ['번호','부서','제품명','규격','수량','단위','링크','비고','상태','작성자','등록월','등록시간'];
+  const rows = data.map((d, i) => [
+    i+1, d.department, d.productName, d.size, d.quantity, d.unit||'개',
+    d.link||'', d.note||'', d.status||'구매대기', d.writer, d.month||'', d.timestampDisplay||''
+  ]);
+  const csv = '\uFEFF' + [hdrs, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  dlFile(new Blob([csv], {type:'text/csv;charset=utf-8;'}), '비품요청_' + fmtDF(new Date()) + '.csv');
+  toast('📄 CSV 다운로드 완료!', 's');
+}
+
+function exportExcel() {
+  if (typeof XLSX === 'undefined') { toast('XLSX 라이브러리 로드 실패.', 'e'); return; }
+  const data = getFiltS();
+  if (!data.length) { toast('데이터가 없습니다.', 'w'); return; }
+  const wb = XLSX.utils.book_new();
+  /* 전체 시트 */
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['번호','부서','제품명','규격','수량','단위','링크','비고','상태','작성자','등록월','등록시간'],
+    ...data.map((d, i) => [
+      i+1, d.department, d.productName, d.size, d.quantity, d.unit||'개',
+      d.link||'', d.note||'', d.status||'구매대기', d.writer, d.month||'', d.timestampDisplay||''
+    ])
+  ]);
+  ws['!cols'] = [{wch:5},{wch:8},{wch:25},{wch:15},{wch:7},{wch:6},{wch:35},{wch:20},{wch:10},{wch:10},{wch:9},{wch:17}];
+  XLSX.utils.book_append_sheet(wb, '전체목록', ws);
+  /* 부서별 시트 */
+  SDEPTS.forEach(dept => {
+    const dd = data.filter(d => d.department === dept);
+    if (!dd.length) return;
+    const dws = XLSX.utils.aoa_to_sheet([
+      ['번호','제품명','규격','수량','단위','링크','비고','상태','작성자','등록시간'],
+      ...dd.map((d, i) => [i+1, d.productName, d.size, d.quantity, d.unit||'개', d.link||'', d.note||'', d.status||'구매대기', d.writer, d.timestampDisplay||''])
+    ]);
+    XLSX.utils.book_append_sheet(wb, dept, dws);
+  });
+  XLSX.writeFile(wb, '비품요청_' + fmtDF(new Date()) + '.xlsx');
+  toast('📊 엑셀 다운로드 완료!', 's');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [28] UI 전체 갱신 (onSnapshot의 유일한 콜백 대상)
+   ────────────────────────────────────────────────────────────── */
+function refreshAll() {
+  SDEPTS.forEach(dept => renderSupplyList(dept));
+  updateBadges();
+  if (isAdmActive()) { renderAdminView(); updateStats(); }
+}
+function isAdmActive() {
+  const p = document.getElementById('panel-관리자');
+  return p && p.classList.contains('act');
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [29] 모달 헬퍼 & 토스트
+   ────────────────────────────────────────────────────────────── */
+function openOvl(id)  { const el = document.getElementById(id); if (el) el.classList.add('open'); }
+function closeOvl(id) { const el = document.getElementById(id); if (el) el.classList.remove('open'); }
+
+function toast(msg, type = 's') {
+  const box = document.getElementById('toastBox');
+  const t   = document.createElement('div');
+  t.className   = `toast ${type}`;
+  t.textContent = msg;
+  box.appendChild(t);
+  setTimeout(() => {
+    t.style.animation = 'tsOut .3s ease forwards';
+    setTimeout(() => t.remove(), 300);
+  }, 3200);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [30] 유틸리티
+   ────────────────────────────────────────────────────────────── */
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+function gv(id)      { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function st(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function showH(id, show) { const el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none'; }
+function curMonth()  { return new Date().toISOString().substr(0, 7); }
+function fmtD(d)     { return `${d.getFullYear()}.${p2(d.getMonth()+1)}.${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`; }
+function fmtM(d)     { return `${d.getFullYear()}-${p2(d.getMonth()+1)}`; }
+function fmtDF(d)    { return `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}`; }
+function p2(n)       { return String(n).padStart(2, '0'); }
+function uid(pfx)    { return `${pfx}_${Date.now()}_${Math.random().toString(36).substr(2,5)}`; }
+function chunkArr(arr, size) {
+  const r = [];
+  for (let i = 0; i < arr.length; i += size) r.push(arr.slice(i, i + size));
+  return r;
+}
+function dlFile(blob, filename) {
+  const u = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = u; a.download = filename; a.click();
+  URL.revokeObjectURL(u);
+}
+function tsToDisplay(ts) {
+  if (!ts) return '';
+  try {
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return fmtD(d);
+  } catch(e) { return ''; }
+}
+function updateHdrDate() {
+  const n = new Date();
+  const days = ['일','월','화','수','목','금','토'];
+  st('hdrDate', `${n.getFullYear()}.${p2(n.getMonth()+1)}.${p2(n.getDate())} (${days[n.getDay()]})`);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   [31] 앱 초기화 (진입점)
+   ────────────────────────────────────────────────────────────── */
+function init() {
+  updateHdrDate();
+  setInterval(updateHdrDate, 60000);
+
+  /* Firebase 초기화 (실패 시 localStorage 폴백) */
+  initFirebase();
+
+  /* 부서 패널 빌드 (HTML 동적 생성) */
+  SDEPTS.forEach(dept => buildSupplyPanel(dept));
+
+  /* 관리자 월 필터 초기값 */
+  const sm = document.getElementById('supplyMonth');
+  if (sm) sm.value = curMonth();
+
+  /* localStorage 폴백 모드는 setupLocalMode()에서 이미 갱신됨 */
+  /* Firebase 모드는 subscribeSupply() → onSnapshot → refreshAll() 자동 실행 */
+
+  /* 오버레이 배경 클릭 → 닫기 */
+  document.querySelectorAll('.ovl').forEach(ov => {
+    ov.addEventListener('click', e => {
+      if (e.target !== ov) return;
+      if (ov.id === 'cfmModal') { cfmAnswer(false); return; }
+      ov.classList.remove('open');
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+/* ──────────────────────────────────────────────────────────────
+   🔑 localStorage 모드 관리자 비밀번호 변경
+   브라우저 콘솔(F12)에서 실행:
+   localStorage.setItem('adminHash', sh('새비밀번호'));
+   ────────────────────────────────────────────────────────────── */
+
+</script>
+</body>
+</html>
